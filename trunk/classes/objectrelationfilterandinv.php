@@ -41,7 +41,7 @@ class ObjectRelationFilterAndInv
 			$t++;
 		}
 
-		$db =& eZDB::instance();
+		$db = eZDB::instance();
 		$result=$db->arrayQuery("select distinct from_contentobject_id as id from ezcontentobject_link where $sqlCondTo");
 	 	$result=array_merge($result,$db->arrayQuery("select distinct to_contentobject_id as id from ezcontentobject_link where $sqlJoinsFrom") );
 		unset($db);
@@ -55,7 +55,7 @@ class ObjectRelationFilterAndInv
   	  	if (count($liste) ==0) 
   	  		$liste[]=0;
 		$sqlJoins=" ezcontentobject.id in(".implode(",",$liste).") and ";
-		return array('tables' => '', 'joins'  => $sqlJoins);
+		return array('tables' => '', 'joins' => $sqlJoins, 'columns' => '');
 
 	}
 }

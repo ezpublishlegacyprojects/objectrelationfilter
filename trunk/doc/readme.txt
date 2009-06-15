@@ -1,3 +1,8 @@
+Change by André R. */*/200[8|9]
+Merged patch by Kristof Coomans
+Merged patch by Benjamin Lorteau
+Improved error reporting, cs and php performance
+
 Change by stephane couzinier 03/12/2006
 Add ObjectRelationFilterAndInv
 return reverse related objects and related objects link with an object.

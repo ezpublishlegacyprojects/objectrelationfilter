@@ -32,8 +32,8 @@ class ObjectRelationExist
 //		$sqlJoins="ezcontentobject.id in (select from_contentobject_id from ezcontentobject_link where ".$sqlJoins."   ) and ";
 
 		$sqlJoins=" and ezcl2.contentclassattribute_id in (".implode(",",$sqlCond).") "; 
-		$sqlJoins="ezcontentobject.id=ezcl2.from_contentobject_id " . $sqlJoins."   and ";
-		return array('tables' => ' ,ezcontentobject_link  ezcl2', 'joins'  => $sqlJoins);
+		$sqlJoins="ezcontentobject.id=ezcl2.from_contentobject_id " . $sqlJoins . "  and ";
+		return array('tables' => ' ,ezcontentobject_link ezcl2', 'joins'  => $sqlJoins, 'columns' => '');
 	}
 }
 ?>

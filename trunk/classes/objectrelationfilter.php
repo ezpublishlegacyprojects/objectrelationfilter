@@ -1,55 +1,82 @@
 <?php
+
 class ObjectRelationFilter
 {
-	function ObjectRelationFilter()
-	{
-	}
 
-	function createSqlParts($params)
-	{
-		// first optional param element should be either 'or' or 'and'
-		if(!is_numeric($params[0]))
-			$clause = array_shift($params);
-		else
-			$clause = "and";
+   function ObjectRelationFilter()
+   {
 
-		// remaining params are pairs of attribute id and object id which should be matched.
-		// object id can also be an array of object ids, in that case the match is on either object id.
-		$t = 0;
-		$sqlCond="";
-		$sqlJoins="";
-		while(sizeof($params) > 1) {
-			$attribute_id = array_shift($params);
-			$relatedobject_id = array_shift($params);
-			if (!is_numeric($relatedobject_id) ){
-				$relatedobject_id=0;
-			}
-			//echo $attribute_id."<br>";
-            if ( !is_numeric( $attribute_id ) )
-            	$attribute_id = eZContentObjectTreeNode::classAttributeIDByIdentifier( $attribute_id );
-			if ( $attribute_id === false )
-	            eZDebug::writeError( "Unknown attribute identifier", "objectrelationfilter::createSqlParts()" );
-			$sqlCond = " ( contentclassattribute_id=$attribute_id and to_contentobject_id=$relatedobject_id) ";
-			if($t >= 1)
-				$sqlJoins .= $clause .$sqlCond ;
-			else
-				$sqlJoins .= $sqlCond ;
-			$t++;
-		}
-		$db =& eZDB::instance();
-		$result=$db->arrayQuery("select distinct from_contentobject_id from ezcontentobject_link where $sqlJoins");
-		unset($db);
-		$liste=Array();
-	 	foreach ( $result as $row )
-	  	{
-     		$liste[]=$row['from_contentobject_id'];
-  	  	}
-  	  	unset($result);
-  	  
-  	  	if (count($liste) ==0) 
-  	  		$liste[]=0;
-		$sqlJoins=" ezcontentobject.id in(".implode(",",$liste).") and ";
-		return array('tables' => '', 'joins'  => $sqlJoins);
-	}
+   }
+
+   function createSqlParts( $params )
+   {
+       // first optional param element could be either 'or' or 'and', deafult is 'and'
+       if( $params[0] === 'or' || $params[0] === 'OR' || $params[0] === 'and' || $params[0] === 'AND' )
+       {
+           $matchAll = ( strtolower( array_shift( $params ) ) === 'and' );
+       }
+       else
+       {
+           $matchAll = true;
+       }
+
+       // remaining params are pairs of attribute id and related object id which should be matched.
+       // related object id can also be an array, witch results in a 'or' fetch on those relations
+       $i = 0;
+       $sqlCondArray = array();
+       while( isset( $params[1] ) )
+       {
+           $attributeId = array_shift( $params );
+           $relatedobjectId = array_shift( $params );
+
+           if ( !is_numeric( $attributeId ) )
+           {
+               $tempAttributeId = eZContentObjectTreeNode::classAttributeIDByIdentifier( $attributeId );
+               if ( $tempAttributeId === false )
+               {
+                   eZDebug::writeError( 'Unknown attribute identifier: '. $attributeId, 'ObjectRelationFilter::createSqlParts()' );
+                   return array( 'tables' => '', 'joins' => '', 'columns' => '' );
+               }
+               $attributeId = $tempAttributeId;
+           }
+
+           if ( is_array( $relatedobjectId ) )
+           {
+               $toCondition = "l$i.to_contentobject_id IN ( " . join( ', ', $relatedobjectId ) . " )";
+           }
+           else if ( is_numeric( $relatedobjectId ) )
+           {
+               $toCondition = "l$i.to_contentobject_id= $relatedobjectId";
+           }
+           else
+           {
+                eZDebug::writeError( 'Unknown relation id: '. $relatedobjectId . ' url: ' . $_SERVER['REQUEST_URI'], 'ObjectRelationFilter::createSqlParts()' );
+                continue;
+           }
+
+           $subSelect = "SELECT from_contentobject_id
+               FROM ezcontentobject_link l$i
+               WHERE l$i.from_contentobject_id = ezcontentobject_tree.contentobject_id AND
+                     l$i.from_contentobject_version = ezcontentobject_tree.contentobject_version AND
+                     l$i.contentclassattribute_id = $attributeId AND
+                     $toCondition";
+
+           $sqlCondArray[] = "ezcontentobject_tree.contentobject_id IN ( $subSelect )";
+           $i++;
+       }
+
+       if ( isset( $sqlCondArray[0] ) )
+       {
+           $joins = '( ' . join( $matchAll ? ' AND ' : ' OR ', $sqlCondArray ) . ' ) AND';
+       }
+       else
+       {
+           $joins = '';
+       }
+
+       //eZDebug::writeDebug( $joins );
+       return array( 'tables' => '', 'joins' => $joins, 'columns' => '' );
+   }
 }
+
 ?>
